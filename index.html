@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FP IMU Control</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .main-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            padding: 25px;
+            width: 95vw;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 25px;
+            font-size: 2.2em;
+            font-weight: 300;
+        }
+        
+        .control-row {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            padding: 10px 18px;
+            font-size: 13px;
+            font-weight: 500;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.1);
+            min-width: 120px;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        #connectBtn {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            font-size: 14px;
+            min-width: 160px;
+        }
+        
+        #debugBtn, #inspectBtn {
+            background: linear-gradient(45deg, #2196F3, #1976D2);
+            color: white;
+        }
+        
+        #inspectBtn {
+            background: linear-gradient(45deg, #FF9800, #F57C00);
+        }
+        
+        #calibrateBtn {
+            background: linear-gradient(45deg, #ff9800, #f57c00);
+        }
+        
+        #sensitivityBtn {
+            background: linear-gradient(45deg, #2196f3, #1976d2);
+        }
+        
+        #pitchSensBtn {
+            background: linear-gradient(45deg, #9c27b0, #7b1fa2);
+        }
+        
+        #calibrateBtn, #sensitivityBtn, #pitchSensBtn {
+            color: white;
+        }
+        
+        #status {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            border-left: 4px solid #4CAF50;
+        }
+        
+        #debug, #inspector {
+            margin-bottom: 15px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 10px;
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 8px;
+            max-height: 120px;
+            overflow-y: auto;
+            border: 1px solid #e9ecef;
+        }
+        
+        #container {
+            position: relative;
+            width: calc(100% - 20px);
+            height: 60vh;
+            border: 2px solid #2c3e50;
+            background: linear-gradient(45deg, #ffffff 0%, #f8f9fa 100%);
+            margin: 0 auto;
+            border-radius: 12px;
+            box-shadow: inset 0 3px 12px rgba(0,0,0,0.1);
+        }
+        
+        #pointer {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: radial-gradient(circle, #e74c3c, #c0392b);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: all 0.1s ease;
+            box-shadow: 0 3px 12px rgba(231, 76, 60, 0.4);
+            border: 2px solid white;
+        }
+        
+        .section-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: #6c757d;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-align: center;
+        }
+        
+        @media (max-width: 768px) {
+            .main-container {
+                width: 98vw;
+                padding: 15px;
+            }
+            
+            .control-row {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            button {
+                min-width: 180px;
+            }
+            
+            h1 {
+                font-size: 1.8em;
+            }
+            
+            #container {
+                width: calc(100% - 10px);
+                height: 50vh;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <h1>FP IMU Control</h1>
+        
+        <div id="status">Status: Disconnected</div>
+        
+        <!-- Primary Controls Row -->
+        <div class="section-title">Primary Controls</div>
+        <div class="control-row">
+            <button id="connectBtn">Connect to Device</button>
+            <button id="debugBtn">Toggle Debug Mode</button>
+            <button id="inspectBtn">Toggle Data Inspector</button>
+        </div>
+        
+        <!-- Calibration & Sensitivity Controls Row -->
+        <div class="section-title">Calibration & Sensitivity</div>
+        <div class="control-row">
+            <button id="calibrateBtn" style="display: none;">Calibrate Center</button>
+            <button id="sensitivityBtn" style="display: none;">Boost Yaw 3x</button>
+            <button id="pitchSensBtn" style="display: none;">Boost Pitch 3x</button>
+        </div>
+        
+        <div id="debug" style="display: none;">Debug info will appear here...</div>
+        <div id="inspector" style="display: none;">Raw data analysis will appear here...</div>
+        
+        <div id="container">
+            <div id="pointer"></div>
+        </div>
+    </div>
+
+    <script>
+        // Device configuration
+        const DEVICE_NAME = 'FAN:';
+        const HEART_RATE_SERVICE_UUID = '0000180d-0000-1000-8000-00805f9b34fb';
+        const HEART_RATE_MEASUREMENT_UUID = '00002a37-0000-1000-8000-00805f9b34fb';
+        const AUTO_IO_SERVICE_UUID = '00001815-0000-1000-8000-00805f9b34fb';
+        const AUTO_IO_CHARACTERISTIC_UUID = '23d1bcea-5f78-2315-deef-121225150000';
+        
+        const PRIMARY_SERVICE_UUIDS = [HEART_RATE_SERVICE_UUID, AUTO_IO_SERVICE_UUID];
+        const FALLBACK_SERVICE_UUIDS = [
+            '0000180f-0000-1000-8000-00805f9b34fb',
+            '6e400001-b5a3-f393-e0a9-e50e24dcca9e'
+        ];
+        
+        let device, characteristic;
+        let pointer = document.getElementById('pointer');
+        let container = document.getElementById('container');
+        let status = document.getElementById('status');
+        let connectBtn = document.getElementById('connectBtn');
+        let debugDiv = document.getElementById('debug');
+        let debugBtn = document.getElementById('debugBtn');
+        let inspectorDiv = document.getElementById('inspector');
+        let inspectBtn = document.getElementById('inspectBtn');
+        let calibrateBtn = document.getElementById('calibrateBtn');
+        let sensitivityBtn = document.getElementById('sensitivityBtn');
+        let pitchSensBtn = document.getElementById('pitchSensBtn');
+        let debugMode = false, inspectMode = false;
+        
+        // Calibration and sensitivity state
+        let yawOffset = 0, pitchOffset = 0;
+        let yawSensitivityMultiplier = 1.0, pitchSensitivityMultiplier = 1.0;
+        let isCalibrating = false;
+        let lastYaw = 0, lastPitch = 0;
+        
+        // Pointer positioning
+        let centerX = container.offsetWidth / 2;
+        let centerY = container.offsetHeight / 2;
+        pointer.style.left = centerX + 'px';
+        pointer.style.top = centerY + 'px';
+        
+        connectBtn.addEventListener('click', connect);
+        debugBtn.addEventListener('click', toggleDebug);
+        inspectBtn.addEventListener('click', toggleInspect);
+        calibrateBtn.addEventListener('click', calibrateCenter);
+        sensitivityBtn.addEventListener('click', toggleYawSensitivity);
+        pitchSensBtn.addEventListener('click', togglePitchSensitivity);
+        
+        function toggleDebug() {
+            debugMode = !debugMode;
+            debugDiv.style.display = debugMode ? 'block' : 'none';
+            debugBtn.textContent = debugMode ? 'Hide Debug' : 'Show Debug';
+        }
+        
+        function toggleInspect() {
+            inspectMode = !inspectMode;
+            inspectorDiv.style.display = inspectMode ? 'block' : 'none';
+            inspectBtn.textContent = inspectMode ? 'Hide Inspector' : 'Show Inspector';
+        }
+        
+        function calibrateCenter() {
+            isCalibrating = true;
+            log('🎯 Starting calibration process...');
+            
+            pointer.style.left = centerX + 'px';
+            pointer.style.top = centerY + 'px';
+            
+            calibrateBtn.textContent = 'Calibrating...';
+            calibrateBtn.style.backgroundColor = '#ff5722';
+            status.textContent = 'Status: Calibrating - Hold device steady...';
+            
+            setTimeout(() => {
+                yawOffset = lastYaw;
+                pitchOffset = lastPitch;
+                
+                isCalibrating = false;
+                calibrateBtn.textContent = 'Calibrate Center';
+                calibrateBtn.style.backgroundColor = '#ff9800';
+                
+                log(`✅ Center calibrated! New offsets - Yaw: ${yawOffset.toFixed(1)}°, Pitch: ${pitchOffset.toFixed(1)}°`);
+                status.textContent = 'Status: Center calibrated! 🎯 Move device to test';
+                
+                pointer.style.left = centerX + 'px';
+                pointer.style.top = centerY + 'px';
+            }, 1000);
+        }
+        
+        function toggleYawSensitivity() {
+            if (yawSensitivityMultiplier === 1.0) {
+                yawSensitivityMultiplier = 3.0;
+                sensitivityBtn.textContent = 'Reset Yaw (3x)';
+                sensitivityBtn.style.backgroundColor = '#f44336';
+                log('Yaw sensitivity boosted to 3x');
+            } else {
+                yawSensitivityMultiplier = 1.0;
+                sensitivityBtn.textContent = 'Boost Yaw 3x';
+                sensitivityBtn.style.backgroundColor = '#2196f3';
+                log('Yaw sensitivity reset to 1x');
+            }
+        }
+        
+        function togglePitchSensitivity() {
+            if (pitchSensitivityMultiplier === 1.0) {
+                pitchSensitivityMultiplier = 3.0;
+                pitchSensBtn.textContent = 'Reset Pitch (3x)';
+                pitchSensBtn.style.backgroundColor = '#f44336';
+                log('Pitch sensitivity boosted to 3x');
+            } else {
+                pitchSensitivityMultiplier = 1.0;
+                pitchSensBtn.textContent = 'Boost Pitch 3x';
+                pitchSensBtn.style.backgroundColor = '#9c27b0';
+                log('Pitch sensitivity reset to 1x');
+            }
+        }
+        
+        // Store last values for calibration
+        
+        function log(message, type = 'debug') {
+            console.log(message);
+            if (type === 'debug' && debugMode) {
+                const timestamp = new Date().toLocaleTimeString();
+                debugDiv.innerHTML += `[${timestamp}] ${message}<br>`;
+                debugDiv.scrollTop = debugDiv.scrollHeight;
+            } else if (type === 'inspect' && inspectMode) {
+                const timestamp = new Date().toLocaleTimeString();
+                inspectorDiv.innerHTML += `[${timestamp}] ${message}<br>`;
+                inspectorDiv.scrollTop = inspectorDiv.scrollHeight;
+            }
+        }
+        
+        // Initialize panels as hidden
+        debugDiv.style.display = 'none';
+        
+        async function connect() {
+            try {
+                status.textContent = 'Status: Scanning for FAN devices...';
+                log('Starting BLE scan for FAN devices...');
+                
+                // First, try to find devices with "FAN" in the name using acceptAllDevices
+                // This will show the device picker where user can select from available devices
+                try {
+                    device = await navigator.bluetooth.requestDevice({
+                        acceptAllDevices: true,
+                        optionalServices: [...PRIMARY_SERVICE_UUIDS, ...FALLBACK_SERVICE_UUIDS]
+                    });
+                    
+                    // Check if selected device has "FAN" in its name
+                    if (device.name && device.name.toUpperCase().includes('FAN')) {
+                        log(`Selected FAN device: ${device.name}`);
+                    } else if (device.name) {
+                        log(`Selected device: ${device.name} (Warning: This doesn't appear to be a FAN device)`);
+                        // Allow connection anyway - user might know what they're doing
+                    } else {
+                        log(`Selected device with no name (ID: ${device.id})`);
+                        // Allow connection anyway - some devices don't advertise names
+                    }
+                    
+                } catch (error) {
+                    // Fallback: Try the original namePrefix approach
+                    log('User cancelled device selection, trying namePrefix filter...');
+                    try {
+                        device = await navigator.bluetooth.requestDevice({
+                            filters: [{ namePrefix: DEVICE_NAME }],
+                            optionalServices: [...PRIMARY_SERVICE_UUIDS, ...FALLBACK_SERVICE_UUIDS]
+                        });
+                        log(`Found FAN device by prefix: ${device.name}`);
+                    } catch (prefixError) {
+                        // Final fallback: Try by Heart Rate service
+                        try {
+                            device = await navigator.bluetooth.requestDevice({
+                                filters: [{ services: [HEART_RATE_SERVICE_UUID] }],
+                                optionalServices: [...PRIMARY_SERVICE_UUIDS, ...FALLBACK_SERVICE_UUIDS]
+                            });
+                            log(`Found device by Heart Rate service: ${device.name}`);
+                        } catch (serviceError) {
+                            throw new Error('No suitable devices found or user cancelled selection');
+                        }
+                    }
+                }
+                
+                status.textContent = `Status: Connecting to ${device.name}...`;
+                const server = await device.gatt.connect();
+                log('GATT connection successful');
+                
+                status.textContent = 'Status: Connected, discovering services...';
+                
+                let service = null;
+                let characteristic = null;
+                
+                try {
+                    service = await server.getPrimaryService(HEART_RATE_SERVICE_UUID);
+                    characteristic = await service.getCharacteristic(HEART_RATE_MEASUREMENT_UUID);
+                    log('Heart Rate Service connected');
+                } catch (error) {
+                    try {
+                        service = await server.getPrimaryService(AUTO_IO_SERVICE_UUID);
+                        characteristic = await service.getCharacteristic(AUTO_IO_CHARACTERISTIC_UUID);
+                        log('Auto IO Service connected');
+                    } catch (autoIoError) {
+                        throw new Error('Could not find Heart Rate or Auto IO services');
+                    }
+                }
+                
+                if (!service || !characteristic) {
+                    throw new Error('No suitable service or characteristic found');
+                }
+                
+                if (characteristic.properties.indicate) {
+                    await characteristic.startNotifications();
+                    log('Notifications enabled');
+                } else if (characteristic.properties.notify) {
+                    await characteristic.startNotifications();
+                    log('Notifications enabled');
+                } else {
+                    throw new Error('Characteristic does not support notifications');
+                }
+                
+                status.textContent = 'Status: Connected, starting data stream...';
+                
+                if (characteristic.properties.write || characteristic.properties.writeWithoutResponse) {
+                    try {
+                        const triggerCommand = new Uint8Array([0x03, 0x00, 0x06, 0x15, 0xE5]);
+                        await characteristic.writeValue(triggerCommand);
+                        log('Trigger command sent successfully');
+                    } catch (error) {
+                        log(`Failed to send trigger command: ${error.message}`);
+                    }
+                }
+                
+                characteristic.addEventListener('characteristicvaluechanged', handleIMUData);
+                device.addEventListener('gattserverdisconnected', handleDisconnection);
+                
+                status.textContent = `Status: Connected to ${device.name} - Receiving IMU data...`;
+                connectBtn.textContent = 'Disconnect';
+                connectBtn.onclick = disconnect;
+                
+                calibrateBtn.style.display = 'inline-block';
+                sensitivityBtn.style.display = 'inline-block';
+                pitchSensBtn.style.display = 'inline-block';
+                
+                log('Connection setup complete');
+                
+            } catch (error) {
+                console.error('Connection failed:', error);
+                log(`Connection failed: ${error.message}`);
+                status.textContent = 'Status: Connection failed - ' + error.message;
+                
+                if (error.message.includes('User cancelled')) {
+                    status.textContent = 'Status: Connection cancelled by user';
+                } else if (error.message.includes('Bluetooth adapter not available')) {
+                    status.textContent = 'Status: Bluetooth not available - please enable Bluetooth';
+                } else if (error.message.includes('No suitable service')) {
+                    status.textContent = 'Status: Device found but does not have expected services';
+                }
+            }
+        }
+        
+        function disconnect() {
+            if (device && device.gatt.connected) {
+                device.gatt.disconnect();
+                log('Device disconnected');
+            }
+            resetUI();
+        }
+        
+        function handleDisconnection(event) {
+            log('Device disconnected unexpectedly');
+            status.textContent = 'Status: Device disconnected - Click to reconnect';
+            connectBtn.textContent = 'Reconnect to Device';
+            connectBtn.onclick = connect;
+            resetPointer();
+        }
+        
+        function resetUI() {
+            status.textContent = 'Status: Disconnected';
+            connectBtn.textContent = 'Connect to Device';
+            connectBtn.onclick = connect;
+            
+            calibrateBtn.style.display = 'none';
+            sensitivityBtn.style.display = 'none';
+            pitchSensBtn.style.display = 'none';
+            
+            resetPointer();
+        }
+        
+        function resetPointer() {
+            pointer.style.left = centerX + 'px';
+            pointer.style.top = centerY + 'px';
+        }
+        
+        function handleIMUData(event) {
+            const value = event.target.value;
+            const data = new Uint8Array(value.buffer);
+            
+            if (debugMode && Math.random() < 0.1) {
+                log(`Received ${data.length} bytes: ${Array.from(data).map(b => b.toString(16).padStart(2, '0')).join(' ')}`);
+            }
+            
+            try {
+                // Check for valid header: 0x41 0x00 0x06 0x15
+                if (data.length >= 68 && data[0] === 0x41 && data[1] === 0x00 && data[2] === 0x06 && data[3] === 0x15) {
+                    
+                    const dataView = new DataView(data.buffer, data.byteOffset + 4); // Skip 4-byte header
+                    
+                    // Parse IMU data - YPR angles are at offset 24-35
+                    const yaw = dataView.getFloat32(24, true);   // ypr[0] - Yaw in degrees
+                    const pitch = dataView.getFloat32(28, true); // ypr[1] - Pitch in degrees
+                    const roll = dataView.getFloat32(32, true);  // ypr[2] - Roll in degrees
+                    const movingFlag = dataView.getUint8(36);    // Moving indicator
+                    
+                    if (debugMode && Math.random() < 0.2) {
+                        log(`YPR: [${yaw.toFixed(2)}, ${pitch.toFixed(2)}, ${roll.toFixed(2)}] deg, Moving: ${movingFlag}`);
+                    }
+                    
+                    // Data inspector for real-time analysis
+                    if (inspectMode && Math.random() < 0.3) {
+                        log(`YPR Raw: Y=${yaw.toFixed(1)}° P=${pitch.toFixed(1)}° R=${roll.toFixed(1)}° | Moving=${movingFlag}`, 'inspect');
+                    }
+                    
+                    // Validate values
+                    if (isNaN(yaw) || isNaN(pitch) || isNaN(roll)) {
+                        if (debugMode) log(`Invalid YPR values: Yaw=${yaw}, Pitch=${pitch}, Roll=${roll}`);
+                        return;
+                    }
+                    
+                    // Apply calibration offsets and clamp values
+                    let clampedYaw = Math.max(-180, Math.min(180, yaw - yawOffset));
+                    let clampedPitch = Math.max(-90, Math.min(90, pitch - pitchOffset));
+                    
+                    // Store for calibration
+                    lastYaw = yaw;
+                    lastPitch = pitch;
+                    
+                    // Skip movement during calibration
+                    if (isCalibrating) {
+                        if (debugMode && Math.random() < 0.2) {
+                            log(`Calibration in progress - Current YPR: [${yaw.toFixed(1)}, ${pitch.toFixed(1)}, ${roll.toFixed(1)}]`);
+                        }
+                        return;
+                    }
+                    
+                    // Calculate adaptive and manual sensitivities
+                    let adaptiveSensitivity = 1.0;
+                    let yawSensitivity = yawSensitivityMultiplier;
+                    let pitchSensitivity = pitchSensitivityMultiplier;
+                    
+                    // Reduce sensitivity near extremes to prevent edge-hugging
+                    if (Math.abs(clampedYaw) > 150 || Math.abs(clampedPitch) > 75) {
+                        adaptiveSensitivity = 0.3;
+                    } else if (Math.abs(clampedYaw) > 90 || Math.abs(clampedPitch) > 45) {
+                        adaptiveSensitivity = 0.6;
+                    }
+                    
+                    // Auto-boost low movement axes
+                    if (Math.abs(clampedYaw) < 5 && Math.abs(clampedPitch) > 10) {
+                        yawSensitivity *= 3.0;
+                    }
+                    if (Math.abs(clampedPitch) < 5 && Math.abs(clampedYaw) > 10) {
+                        pitchSensitivity *= 3.0;
+                    }
+                    
+                    // Calculate pointer position
+                    const baseYawSensitivity = 2.0;
+                    const basePitchSensitivity = 1.5;
+                    const maxRange = 250;
+                    
+                    // Linear mapping with non-linear dampening for large values
+                    let normalizedYaw = clampedYaw / 180;
+                    let normalizedPitch = clampedPitch / 90;
+                    
+                    if (Math.abs(clampedYaw) > 120) {
+                        normalizedYaw = Math.sign(clampedYaw) * Math.sin((Math.abs(clampedYaw) / 180) * (Math.PI / 2));
+                    }
+                    if (Math.abs(clampedPitch) > 60) {
+                        normalizedPitch = Math.sign(clampedPitch) * Math.sin((Math.abs(clampedPitch) / 90) * (Math.PI / 2));
+                    }
+                    
+                    // Final position calculation
+                    const x = centerX + (normalizedYaw * maxRange * baseYawSensitivity * yawSensitivity * adaptiveSensitivity);
+                    const y = centerY - (normalizedPitch * maxRange * basePitchSensitivity * pitchSensitivity * adaptiveSensitivity);
+                    
+                    // Constrain to container bounds
+                    const padding = 30;
+                    const constrainedX = Math.max(padding, Math.min(container.offsetWidth - padding, x));
+                    const constrainedY = Math.max(padding, Math.min(container.offsetHeight - padding, y));
+                    
+                    // Update pointer position
+                    pointer.style.left = constrainedX + 'px';
+                    pointer.style.top = constrainedY + 'px';
+                    
+                    // Update status periodically
+                    if (Math.random() < 0.15) {
+                        let sensitivityInfo = '';
+                        if (yawSensitivityMultiplier > 1 || pitchSensitivityMultiplier > 1) {
+                            sensitivityInfo = ` [Y${yawSensitivityMultiplier}x P${pitchSensitivityMultiplier}x]`;
+                        }
+                        status.textContent = `Status: YPR [${clampedYaw.toFixed(1)}°, ${clampedPitch.toFixed(1)}°, ${roll.toFixed(1)}°] ${movingFlag ? '🔄' : '⏸️'}${sensitivityInfo}`;
+                    }
+                    
+                } else {
+                    // Handle START/STOP packets
+                    const dataStr = new TextDecoder().decode(data);
+                    if (dataStr.includes('START')) {
+                        log('📡 Data stream started');
+                        status.textContent = 'Status: Data stream started';
+                    } else if (dataStr.includes('STOP')) {
+                        log('⏹️ Data stream stopped');
+                        status.textContent = 'Status: Data stream stopped';
+                    } else if (debugMode && Math.random() < 0.1) {
+                        const headerHex = Array.from(data.slice(0, 4)).map(b => '0x' + b.toString(16).padStart(2, '0')).join(' ');
+                        log(`Invalid header: ${headerHex} (expected: 0x41 0x00 0x06 0x15)`);
+                    }
+                }
+                
+            } catch (error) {
+                if (debugMode) log(`Error parsing IMU data: ${error.message}`);
+            }
+        }
+        
+        // Handle Bluetooth availability changes
+        if (navigator.bluetooth) {
+            navigator.bluetooth.addEventListener('availabilitychanged', event => {
+                if (!event.value) disconnect();
+            });
+        }
+    </script>
+</body>
+</html>
