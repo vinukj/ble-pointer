@@ -267,14 +267,37 @@ This system allows for precise control calibration without requiring device repo
 
 ## 🚀 Getting Started
 
+### Using the Deployed Page
+
+The application is automatically deployed to GitHub Pages. Once enabled, visit the live page at:
+`https://vinukj.github.io/ble-pointer/`
+
+### Running Locally
+
 1. Open `index.html` in a modern browser (Chrome/Edge recommended)
 2. Enable Bluetooth and ensure your ESP32 device is powered on
 3. Click "Connect to Device" and select your FAN device from the list
 4. Use "Calibrate Center" to set your preferred neutral position
 5. Adjust sensitivity controls as needed for optimal response
 
+## 🔧 Deployment
+
+This repository includes a GitHub Actions workflow that automatically deploys the HTML page to GitHub Pages.
+
+### How to Enable GitHub Pages
+
+1. Go to your repository settings on GitHub
+2. Navigate to **Settings** > **Pages**
+3. Under **Source**, select **GitHub Actions** as the deployment method
+4. The workflow will automatically deploy on pushes to the `main` branch
+5. Your page will be available at `https://vinukj.github.io/ble-pointer/`
+
+The deployment workflow is configured in `.github/workflows/deploy.yml` and will run automatically when:
+- Code is pushed to the `main` branch
+- Manually triggered via the Actions tab
+
 ## 📋 Requirements
 
 - Modern web browser with Web Bluetooth API support
 - ESP32 device with IMU sensor broadcasting on Heart Rate Service
-- HTTPS connection (required for Web Bluetooth API)
+- HTTPS connection (required for Web Bluetooth API - automatically provided by GitHub Pages)
