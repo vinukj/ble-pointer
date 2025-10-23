@@ -1,0 +1,1531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Cricket Bat BLE Control</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .main-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            padding: 25px;
+            width: 95vw;
+        }
+
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 25px;
+            font-size: 2.2em;
+            font-weight: 300;
+        }
+
+        .control-row {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 10px 18px;
+            font-size: 13px;
+            font-weight: 500;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.1);
+            min-width: 120px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        #connectBtn {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            font-size: 14px;
+            min-width: 160px;
+        }
+
+        #clearTrajectoryBtn {
+            background: linear-gradient(45deg, #FF9800, #F57C00);
+            color: white;
+            font-size: 14px;
+            min-width: 140px;
+        }
+
+        #clearTrajectoryBtn:hover {
+            background: linear-gradient(45deg, #F57C00, #EF6C00);
+        }
+
+        #status {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            border-left: 4px solid #4CAF50;
+        }
+
+        #accelDisplay {
+            text-align: center;
+            margin-bottom: 15px;
+            padding: 12px;
+            background: #e3f2fd;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            border-left: 4px solid #2196F3;
+        }
+
+        .header-compass-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 30px;
+            margin-bottom: 15px;
+        }
+
+        #compassDisplay {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            position: relative;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            border: 3px solid #fff;
+        }
+
+        .compass-needle {
+            position: absolute;
+            width: 4px;
+            height: 50px;
+            background: linear-gradient(to top, #ff6b6b, #ffd93d);
+            left: 50%;
+            top: 10px;
+            transform-origin: center 50px;
+            margin-left: -2px;
+            border-radius: 2px;
+        }
+
+        .compass-center {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background: white;
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .compass-labels {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+
+        .compass-label {
+            position: absolute;
+            width: 100%;
+            text-align: center;
+        }
+
+        .compass-label-n { top: 5px; }
+        .compass-label-s { bottom: 5px; }
+        .compass-label-e { right: 5px; top: 50%; transform: translateY(-50%); width: auto; }
+        .compass-label-w { left: 5px; top: 50%; transform: translateY(-50%); width: auto; }
+
+        #swingInfoDisplay {
+            text-align: center;
+            padding: 12px;
+            background: #fff3e0;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            border-left: 4px solid #ff9800;
+            min-height: 30px;
+        }
+
+        #scene-container {
+            width: 100%;
+            height: 70vh;
+            border: 2px solid #2c3e50;
+            background: linear-gradient(45deg, #ffffff 0%, #f8f9fa 100%);
+            border-radius: 12px;
+            box-shadow: inset 0 3px 12px rgba(0,0,0,0.1);
+            margin: 0 auto;
+        }
+
+        @media (max-width: 768px) {
+            .main-container {
+                width: 98vw;
+                padding: 15px;
+            }
+
+            .control-row {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            button {
+                min-width: 180px;
+            }
+
+            h1 {
+                font-size: 1.8em;
+            }
+
+            #scene-container {
+                width: calc(100% - 10px);
+                height: 60vh;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <h1>3D Cricket Bat BLE Control</h1>
+
+        <!-- Compass Display with Swing Info -->
+        <div class="header-compass-container">
+            <div id="compassDisplay">
+                <div class="compass-needle" id="compassNeedle"></div>
+                <div class="compass-center"></div>
+                <div class="compass-labels">
+                    <div class="compass-label compass-label-n">N</div>
+                    <div class="compass-label compass-label-s">S</div>
+                    <div class="compass-label compass-label-e">E</div>
+                    <div class="compass-label compass-label-w">W</div>
+                </div>
+            </div>
+            <div id="swingInfoDisplay">Waiting for swing...<br><span style="font-size: 12px; color: #666;">Direction: -- | Speed: -- m/s | Type: --</span></div>
+        </div>
+
+        <div id="status">Status: Disconnected</div>
+        <div id="accelDisplay">Acceleration: X: 0.00, Y: 0.00, Z: 0.00 m/s²</div>
+
+        <!-- Control Buttons -->
+                <div class="control-row">
+            <button id="connectBtn">Connect BLE Device</button>
+            <button id="disconnectBtn">Disconnect</button>
+            <button id="resetBtn" style="background: linear-gradient(45deg, #FF6B6B, #D32F2F); color: white; font-weight: bold;">⟺ Reset</button>
+            <button id="calibrateBtn" style="background: linear-gradient(45deg, #FF9800, #F57C00); color: white; font-weight: bold;">🎯 Calibrate North</button>
+            <button id="nedToggleBtn" style="background: linear-gradient(45deg, #4CAF50, #2E7D32); color: white; font-weight: bold;">📍 NED Mode: ON</button>
+        </div>
+        
+        <!-- Timing Controls -->
+        <div style="background: rgba(255,255,255,0.1); margin: 10px; padding: 15px; border-radius: 8px; display: flex; flex-wrap: wrap; gap: 15px; align-items: center;">
+            <div style="font-weight: bold; color: #fff;">Timing Controls:</div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <label style="color: #fff; font-size: 14px;">Initial Run-up:</label>
+                <input type="number" id="runupDelayInput" value="500" min="0" max="2000" step="50" 
+                       style="width: 80px; padding: 5px; border-radius: 4px; border: 1px solid #ccc; text-align: center;">
+                <span style="color: #fff; font-size: 12px;">ms</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <label style="color: #fff; font-size: 14px;">Capture Window:</label>
+                <input type="number" id="captureWindowInput" value="750" min="250" max="2000" step="50" 
+                       style="width: 80px; padding: 5px; border-radius: 4px; border: 1px solid #ccc; text-align: center;">
+                <span style="color: #fff; font-size: 12px;">ms</span>
+            </div>
+            <button id="updateTimingBtn" style="background: linear-gradient(45deg, #2196F3, #1976D2); color: white; padding: 8px 16px; border: none; border-radius: 4px; font-size: 14px; cursor: pointer;">
+                ⚙️ Update Timing
+            </button>
+        </div>
+
+        <!-- Info about trajectory visualization -->
+        <div style="text-align: center; margin-bottom: 10px; font-size: 12px; color: #666;">
+            🟢 Green line shows the cricket bat swing trajectory path
+            <span id="coordinateSystemInfo"> | Coordinate System: XYZ (Sensor Frame)</span>
+        </div>
+
+        <!-- 3D Scene Container -->
+        <div id="scene-container"></div>
+    </div>
+
+    <!-- Three.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <script>
+        // BLE Configuration - Enhanced for ESP32 IMU devices
+        const DEVICE_NAME = 'FAN:'; // Name prefix to match your ESP32 device naming
+        const HEART_RATE_SERVICE_UUID = '0000180d-0000-1000-8000-00805f9b34fb'; // 0x180D
+        const HEART_RATE_MEASUREMENT_UUID = '00002a37-0000-1000-8000-00805f9b34fb'; // 0x2A37
+        const AUTO_IO_SERVICE_UUID = '00001815-0000-1000-8000-00805f9b34fb';
+        const AUTO_IO_CHARACTERISTIC_UUID = '23d1bcea-5f78-2315-deef-121225150000';
+
+        const PRIMARY_SERVICE_UUIDS = [HEART_RATE_SERVICE_UUID, AUTO_IO_SERVICE_UUID];
+        const FALLBACK_SERVICE_UUIDS = [
+            '0000180f-0000-1000-8000-00805f9b34fb',
+            '6e400001-b5a3-f393-e0a9-e50e24dcca9e'  // ESP32 UART service
+        ];
+
+        let device, characteristic;
+        let status = document.getElementById('status');
+        let accelDisplay = document.getElementById('accelDisplay');
+        let connectBtn = document.getElementById('connectBtn');
+        let resetBtn = document.getElementById('resetBtn');
+        let calibrateBtn = document.getElementById('calibrateBtn');
+        let nedToggleBtn = document.getElementById('nedToggleBtn');
+        
+        // Timing control elements
+        let runupDelayInput = document.getElementById('runupDelayInput');
+        let captureWindowInput = document.getElementById('captureWindowInput');
+        let updateTimingBtn = document.getElementById('updateTimingBtn');
+
+        // Trajectory tracking variables - now using accelerometer data
+        let trajectoryPoints = []; // Array to store historical positions based on acceleration
+        let trajectoryLine; // Three.js Line object for the path
+        let maxTrajectoryPoints = 500; // Maximum number of points to keep
+        let trajectoryMaterial; // Material for the trajectory line
+        let batVelocity = new THREE.Vector3(0, 0, 0); // Integrated velocity
+        let batPosition = new THREE.Vector3(0, 0, 0); // Integrated position from acceleration
+        let directionLine; // White line showing direction of movement
+
+        // Capture window variables
+        let captureActive = false; // Whether we're currently capturing
+        let captureStartTime = null; // When the capture started
+        let captureEndTime = null; // When the capture should end
+        
+        // Swing capture timing variables with configurable windows
+        let runupDelay = 500; // Initial run-up delay in milliseconds (default 500ms)
+        let captureDuration = 750; // Capture window duration in milliseconds (default 750ms)
+        let totalCaptureWindow = 2000; // Total streaming time (2 seconds)
+        let analysisStartTime = null; // When to start data analysis (after run-up delay)
+        let analysisEndTime = null; // When to end data analysis
+        
+        let readyForNewCapture = true; // Flag to allow new capture only after reset
+        let resetCooldownEndTime = null; // Prevent immediate recapture after reset
+        
+        // Swing analysis variables
+        let swingStartPosition = new THREE.Vector3(0, 0, 0); // Position at swing start
+        let swingEndPosition = new THREE.Vector3(0, 0, 0); // Position at swing end
+        let swingStartVelocity = new THREE.Vector3(0, 0, 0); // Velocity at start
+        let swingEndVelocity = new THREE.Vector3(0, 0, 0); // Velocity at end
+        let captureComplete = false; // Whether capture has completed
+        
+        // Direction averaging variables
+        let swingDirections = []; // Array to store direction samples during swing
+        let swingVelocities = []; // Array to store velocity magnitudes during swing
+        
+        // Compass calibration variables
+        let compassOffset = 0; // Degrees to add to raw direction to get true North
+        let isCalibrated = false; // Whether compass has been calibrated
+
+        // Coordinate system toggle variables
+        let useNEDCoordinates = true; // Default to NED mode ON
+        
+        // NED coordinate transformation system
+        const coordinateSystems = {
+            XYZ: {
+                name: 'XYZ (Sensor Frame)',
+                description: 'Raw sensor coordinates',
+                transform: (vec) => vec.clone(), // No transformation
+                getDirection: (velocity) => {
+                    const angleRad = Math.atan2(velocity.x, velocity.z);
+                    const angleDeg = angleRad * 180 / Math.PI;
+                    let normalized = (angleDeg + 360) % 360;
+                    if (normalized < 22.5 || normalized >= 337.5) return 'N';
+                    if (normalized < 67.5) return 'NE';
+                    if (normalized < 112.5) return 'E';
+                    if (normalized < 157.5) return 'SE';
+                    if (normalized < 202.5) return 'S';
+                    if (normalized < 247.5) return 'SW';
+                    if (normalized < 292.5) return 'W';
+                    return 'NW';
+                }
+            },
+            NED: {
+                name: 'NED (Navigation Frame)',
+                description: 'North-East-Down coordinates',
+                transform: (vec) => {
+                    // Transform from XYZ sensor frame to NED frame
+                    // Sensor X → NED Z (North)
+                    // Sensor Y → NED X (East)  
+                    // Sensor Z → NED -Y (Down inverted for visualization)
+                    const ned = new THREE.Vector3(
+                        vec.y,      // East = Sensor Y
+                        -vec.z,     // Up (inverted Down) = -Sensor Z
+                        vec.x       // North = Sensor X
+                    );
+                    return ned;
+                },
+                getDirection: (velocity) => {
+                    // NED: North = X, East = Y
+                    const angleRad = Math.atan2(velocity.y, velocity.x);
+                    const angleDeg = angleRad * 180 / Math.PI;
+                    let normalized = (angleDeg + 360) % 360;
+                    if (normalized < 22.5 || normalized >= 337.5) return 'N';
+                    if (normalized < 67.5) return 'NE';
+                    if (normalized < 112.5) return 'E';
+                    if (normalized < 157.5) return 'SE';
+                    if (normalized < 202.5) return 'S';
+                    if (normalized < 247.5) return 'SW';
+                    if (normalized < 292.5) return 'W';
+                    return 'NW';
+                }
+            }
+        };
+        
+        let currentCoordinateSystem = coordinateSystems.XYZ;
+        
+        // 36-direction system - fine-grained direction detection
+        const directions36 = [
+            'N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE',
+            'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'
+        ];
+        
+        // Function to get 36-direction from velocity
+        function getDirection36(velocity) {
+            // Calculate angle in horizontal plane (X-Z for XYZ, X-Y for NED)
+            let angleRad, angleDeg;
+            
+            if (useNEDCoordinates) {
+                // NED: North = X, East = Y
+                angleRad = Math.atan2(velocity.y, velocity.x);
+            } else {
+                // XYZ: X is east, Z is north
+                angleRad = Math.atan2(velocity.x, velocity.z);
+            }
+            
+            angleDeg = angleRad * 180 / Math.PI;
+            let normalized = (angleDeg + 360) % 360;
+            
+            // Apply compass calibration offset (defaults to 0 if not calibrated)
+            normalized = (normalized + compassOffset) % 360;
+            
+            // Return degrees and closest cardinal direction
+            const dirIndex = Math.round(normalized / 10) % 36;
+            const dirNames = [
+                'N', 'N10°', 'NNE', 'N30°', 'NE', 'N50°', 'ENE', 'E10°',
+                'E', 'E50°', 'ESE', 'E130°', 'SE', 'S50°', 'SSE', 'S10°',
+                'S', 'S190°', 'SSW', 'S210°', 'SW', 'S230°', 'WSW', 'W10°',
+                'W', 'W190°', 'WNW', 'W230°', 'NW', 'N230°', 'NNW', 'N210°',
+                'N', 'N10°', 'NNE', 'N30°'
+            ];
+            return { degrees: Math.round(normalized * 10) / 10, direction: dirNames[dirIndex] };
+        }
+        
+        // Function to detect swing type (lofted, normal, below)
+        function analyzeSwingHeight() {
+            // Calculate vertical component
+            const verticalComponent = useNEDCoordinates ? swingEndVelocity.y : swingEndVelocity.y;
+            const horizontalMagnitude = useNEDCoordinates ? 
+                Math.sqrt(swingEndVelocity.x ** 2 + swingEndVelocity.z ** 2) :
+                Math.sqrt(swingEndVelocity.x ** 2 + swingEndVelocity.z ** 2);
+            
+            // Calculate elevation angle
+            const elevationAngle = Math.atan2(verticalComponent, horizontalMagnitude) * 180 / Math.PI;
+            
+            if (elevationAngle > 15) {
+                return { type: 'lofted', color: 0x00ff00, name: 'LOFTED' }; // Green for lofted
+            } else if (elevationAngle < -15) {
+                return { type: 'below', color: 0x0099ff, name: 'BELOW' }; // Blue for below
+            } else {
+                return { type: 'normal', color: 0xffffff, name: 'NORMAL' }; // White for normal
+            }
+        }
+        
+        // Function to convert bowler-facing direction to batsman's perspective
+        function convertToBatsmanView(directionFromBowler) {
+            // Batsman's perspective: 
+            // - Facing bowler = 0° (North)
+            // - Right side (leg side for right-hander) = 90° (East) 
+            // - Behind = 180° (South)
+            // - Left side (off side for right-hander) = 270° (West)
+            
+            // The input direction is already calibrated relative to bowler direction
+            // We just need to normalize it to 0-360 range
+            let batsmanAngle = ((directionFromBowler % 360) + 360) % 360;
+            
+            return batsmanAngle;
+        }
+        
+        // Function to get cricket-specific direction description from batsman's perspective
+        function getCricketDirection(angle) {
+            // Normalize angle to 0-360 from batsman's viewpoint
+            const normalizedAngle = ((angle % 360) + 360) % 360;
+            
+            // Cricket field positions from batsman's perspective (facing bowler at 0°)
+            if (normalizedAngle >= 350 || normalizedAngle < 10) return "Straight down ground";
+            if (normalizedAngle >= 10 && normalizedAngle < 30) return "Straight (leg side)";
+            if (normalizedAngle >= 30 && normalizedAngle < 60) return "Mid-wicket";  
+            if (normalizedAngle >= 60 && normalizedAngle < 90) return "Square leg";
+            if (normalizedAngle >= 90 && normalizedAngle < 120) return "Fine leg";
+            if (normalizedAngle >= 120 && normalizedAngle < 150) return "Behind square leg";
+            if (normalizedAngle >= 150 && normalizedAngle < 180) return "Deep backward";
+            if (normalizedAngle >= 180 && normalizedAngle < 210) return "Behind batsman";
+            if (normalizedAngle >= 210 && normalizedAngle < 240) return "Third man";
+            if (normalizedAngle >= 240 && normalizedAngle < 270) return "Point/Gully";
+            if (normalizedAngle >= 270 && normalizedAngle < 300) return "Cover";
+            if (normalizedAngle >= 300 && normalizedAngle < 330) return "Mid-off";
+            if (normalizedAngle >= 330 && normalizedAngle < 350) return "Straight (off side)";
+            
+            return "Unknown direction";
+        }
+        // Function to analyze swing using weighted direction and velocity data
+        function analyzeSwing() {
+            if (swingDirections.length === 0) return;
+            
+            // Calculate weighted average direction (emphasizing peak velocity moments)
+            let totalDirectionWeight = 0;
+            let weightedDirectionSum = 0;
+            let totalSpeedWeight = 0;
+            let weightedSpeedSum = 0;
+            
+            for (let i = 0; i < swingDirections.length; i++) {
+                const dirData = swingDirections[i];
+                const speedData = swingVelocities[i];
+                
+                weightedDirectionSum += dirData.direction * dirData.weight;
+                totalDirectionWeight += dirData.weight;
+                
+                weightedSpeedSum += speedData.speed * speedData.weight;
+                totalSpeedWeight += speedData.weight;
+            }
+            
+            const avgDirection = weightedDirectionSum / totalDirectionWeight;
+            const avgSpeed = weightedSpeedSum / totalSpeedWeight;
+            
+            // Convert to batsman's perspective
+            const batsmanViewAngle = convertToBatsmanView(avgDirection);
+            const cricketDirection = getCricketDirection(batsmanViewAngle);
+            
+            // Get swing height classification
+            const heightClass = analyzeSwingHeight();
+            
+            // Update direction line with averaged data (using batsman view angle for consistency)
+            updateDirectionLine(batsmanViewAngle, avgSpeed, heightClass);
+            
+            // Update compass display (using batsman view angle)
+            updateCompassDisplay(batsmanViewAngle);
+            
+            // Update swing info display with batsman's perspective
+            updateSwingInfoDisplay(batsmanViewAngle, avgSpeed, heightClass.name, cricketDirection);
+            
+            // Log analysis results with both perspectives
+            console.log(`Swing Analysis: Batsman view=${batsmanViewAngle.toFixed(1)}° (${cricketDirection}), Speed=${avgSpeed.toFixed(2)} m/s, Height=${heightClass.name}`);
+            
+            // Update status with swing direction from batsman's perspective
+            const referenceAngle = (-compassOffset).toFixed(1);
+            if (isCalibrated) {
+                status.textContent = `Status: Shot to ${cricketDirection} (${batsmanViewAngle.toFixed(1)}°), ${heightClass.name}`;
+            } else {
+                // Default behavior when not calibrated - treat current orientation as 0° reference
+                status.textContent = `Status: Shot to ${cricketDirection} (${batsmanViewAngle.toFixed(1)}°), ${heightClass.name} [default ref]`;
+            }
+        }
+        
+        // Function to calculate speed-based line width
+        function getLineWidth(speed) {
+            // Base width of 1, increases with speed
+            // Speed range: 0-30 m/s maps to width 1-15
+            return Math.min(1 + (speed / 30) * 14, 15);
+        }
+        
+        // Function to update compass needle rotation
+        function updateCompassDisplay(degrees) {
+            const compassNeedle = document.getElementById('compassNeedle');
+            const compassContainer = document.getElementById('compassContainer');
+            if (compassNeedle) {
+                compassNeedle.style.transform = `rotate(${degrees}deg)`;
+            }
+            // Show calibration status
+            if (compassContainer) {
+                if (isCalibrated) {
+                    compassContainer.style.border = '2px solid #4CAF50';
+                    compassContainer.style.boxShadow = '0 0 10px rgba(76, 175, 80, 0.3)';
+                } else {
+                    compassContainer.style.border = '2px solid #666';
+                    compassContainer.style.boxShadow = 'none';
+                }
+            }
+        }
+        
+        // Function to update swing information display
+        function updateSwingInfoDisplay(degrees, speed, swingType, cricketDirection) {
+            const swingInfoDisplay = document.getElementById('swingInfoDisplay');
+            if (swingInfoDisplay) {
+                const calibrationInfo = isCalibrated ? `to ${cricketDirection}` : `to ${cricketDirection} [default ref]`;
+                swingInfoDisplay.innerHTML = `Swing Analysis Complete<br><span style="font-size: 12px; color: #666;">Direction: ${degrees.toFixed(1)}° ${calibrationInfo} | Speed: ${speed.toFixed(2)} m/s | Type: ${swingType}</span>`;
+            }
+        }
+
+        // Three.js variables
+        let scene, camera, renderer, controls;
+        let sensorDot, dotMaterial; // Moving dot instead of bat
+        let dotTrail = []; // Trail of past dot positions
+        
+        // Trajectory scaling variables for keeping visualization within view bounds
+        let maxTrajectoryDistance = 0; // Track maximum distance from origin during swing
+        let trajectoryScale = 1.0; // Scale factor to fit trajectory in view
+        const MAX_VISIBLE_DISTANCE = 8.0; // Maximum distance from origin before scaling needed
+        let currentSensorData = {
+            yaw: 0,
+            pitch: 0,
+            roll: 0,
+            movingFlag: 0,
+            accel: new THREE.Vector3(0, 0, 0),
+            quaternion: new THREE.Quaternion(0, 0, 0, 1) // Default identity quaternion
+        };
+
+        // Initialize Three.js scene
+        function initThreeJS() {
+            console.log('Initializing Three.js scene...');
+            // Scene setup
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x2a2a2a); // Darker background for visibility
+            console.log('Scene created with background color');
+
+            // Camera setup (adjusted for larger bat)
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(12, 12, 12); // Increased distance for larger bat
+            camera.lookAt(0, 0, 0);
+            console.log('Camera created and positioned');
+
+            // Renderer setup
+            const container = document.getElementById('scene-container');
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+            renderer.setClearColor(0x404040, 1); // Dark grey background
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            container.appendChild(renderer.domElement);
+            console.log('Renderer created and appended to DOM');
+
+            // Orbit Controls
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            
+            // Disable zoom controls to lock the canvas view
+            controls.enableZoom = false;
+            controls.enablePan = false;
+            // Keep rotation enabled for viewing different angles
+            controls.enableRotate = true;
+
+            // Lighting - Increased intensity
+            const ambientLight = new THREE.AmbientLight(0xffffff, 1.0); // Increased from 0.6
+            scene.add(ambientLight);
+            console.log('Ambient light added');
+
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2); // Increased from 0.8
+            directionalLight.position.set(10, 10, 5);
+            directionalLight.castShadow = true;
+            scene.add(directionalLight);
+            console.log('Directional light added');
+
+            // Create cricket bat
+            createSensorDot();
+
+            // Handle window resize
+            window.addEventListener('resize', onWindowResize, false);
+
+            // Start animation loop
+            console.log('Starting animation loop...');
+            renderer.render(scene, camera); // Initial render
+            animate();
+        }
+
+        function createSensorDot() {
+            // Create a sphere to represent the sensor position
+            const geometry = new THREE.SphereGeometry(0.3, 16, 16);
+            dotMaterial = new THREE.MeshPhongMaterial({
+                color: 0xff0000, // Red by default
+                emissive: 0xff6666, // Glowing effect
+                shininess: 100
+            });
+            
+            sensorDot = new THREE.Mesh(geometry, dotMaterial);
+            sensorDot.position.set(0, 0, 0); // Start at origin
+            scene.add(sensorDot);
+            
+            console.log('Sensor dot created at origin');
+
+            // Add a small axis helper at the dot
+            const axesHelper = new THREE.AxesHelper(1);
+            sensorDot.add(axesHelper);
+
+            console.log('Sensor dot created');
+            console.log('Scene children count:', scene.children.length);
+            console.log('Dot position:', sensorDot.position);
+
+            // Create trajectory line for swing path visualization
+            createTrajectoryLine();
+        }
+
+        function createTrajectoryLine() {
+            // Create material for the trajectory line
+            trajectoryMaterial = new THREE.LineBasicMaterial({
+                color: 0x00ff00, // Green color for the path
+                linewidth: 2,
+                transparent: true,
+                opacity: 0.8
+            });
+
+            // Create initial geometry with a single point
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array([0, 0, 0]); // Start at origin
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+            // Create the line
+            trajectoryLine = new THREE.Line(geometry, trajectoryMaterial);
+            scene.add(trajectoryLine);
+
+            console.log('Trajectory line created for swing path visualization');
+        }
+
+        function clearTrajectory() {
+            trajectoryPoints = [];
+            if (trajectoryLine) {
+                const positions = new Float32Array([0, 0, 0]);
+                trajectoryLine.geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+                trajectoryLine.geometry.attributes.position.needsUpdate = true;
+            }
+            console.log('Trajectory cleared');
+        }
+
+        // Function to determine cardinal/intercardinal direction
+        // Function to determine cardinal/intercardinal direction using current coordinate system
+        function getDirection(velocity) {
+            return currentCoordinateSystem.getDirection(velocity);
+        }
+
+        // Function to create or update direction line
+        function updateDirectionLine() {
+            // Only update direction line during capture - after capture, keep it frozen
+            if (captureComplete) {
+                return; // Keep the frozen final direction line visible
+            }
+            
+            if (!captureActive) {
+                return; // Don't update if capture hasn't started
+            }
+
+            if (batVelocity.length() < 0.01) {
+                // No significant velocity, remove direction line if it exists
+                if (directionLine && scene.getObjectById(directionLine.id)) {
+                    scene.remove(directionLine);
+                    directionLine = null;
+                }
+                return;
+            }
+
+            // Update end velocity for swing analysis
+            swingEndVelocity = batVelocity.clone();
+            
+            // Get swing type (lofted, normal, below) and corresponding color
+            const swingAnalysis = analyzeSwingHeight();
+            const speed = batVelocity.length();
+            const lineWidth = getLineWidth(speed);
+            
+            // Calculate direction vector (normalized)
+            const dirVector = batVelocity.clone().normalize();
+            
+            // Create line from swing start to swing end position
+            const start = swingStartPosition.clone();
+            const end = swingEndPosition.clone();
+            
+            // Remove old direction line if it exists
+            if (directionLine && scene.getObjectById(directionLine.id)) {
+                scene.remove(directionLine);
+            }
+            
+            // Create new direction line
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array([
+                start.x, start.y, start.z,
+                end.x, end.y, end.z
+            ]);
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            
+            // Use color based on swing type
+            const material = new THREE.LineBasicMaterial({
+                color: swingAnalysis.color,
+                linewidth: lineWidth,
+                transparent: true,
+                opacity: 0.9
+            });
+            
+            directionLine = new THREE.Line(geometry, material);
+            scene.add(directionLine);
+        }
+        
+        function onWindowResize() {
+            const container = document.getElementById('scene-container');
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Update sensor dot position and appearance based on BLE data
+            if (currentSensorData && sensorDot) {
+                // Update dot position to follow the integrated trajectory
+                sensorDot.position.copy(batPosition);
+
+                // Change color based on moving flag
+                if (currentSensorData.movingFlag === 1) {
+                    // Red when moving
+                    dotMaterial.color.setHex(0xff0000);
+                    dotMaterial.emissive.setHex(0xff6666);
+                } else {
+                    // Green/cyan when stationary
+                    dotMaterial.color.setHex(0x00ff00);
+                    dotMaterial.emissive.setHex(0x00aa00);
+                }
+
+                // Update status display occasionally (not every frame) - only during active capture
+                if (!captureComplete && Math.random() < 0.1) { // Update ~10% of frames
+                    const accelMagnitude = Math.sqrt(
+                        currentSensorData.accel.x ** 2 + 
+                        currentSensorData.accel.y ** 2 + 
+                        currentSensorData.accel.z ** 2
+                    );
+                    const velMagnitude = batVelocity.length();
+                    const posMagnitude = batPosition.length();
+                    const coordSystem = useNEDCoordinates ? 'NED' : 'XYZ';
+                    status.textContent = `[${coordSystem}] Position: [${batPosition.x.toFixed(2)}, ${batPosition.y.toFixed(2)}, ${batPosition.z.toFixed(2)}] | Accel: ${accelMagnitude.toFixed(2)} m/s² | Vel: ${velMagnitude.toFixed(2)} | Points: ${trajectoryPoints.length}`;
+                }
+
+                // Always integrate motion from accelerometer
+                integrateSensorData();
+
+                // Update trajectory path (only during capture window)
+                updateTrajectory();
+
+                // Update direction line based on current velocity
+                updateDirectionLine();
+            }
+
+            controls.update();
+            try {
+                renderer.render(scene, camera);
+            } catch (error) {
+                console.error('Rendering error:', error);
+            }
+        }
+
+        // Function to integrate sensor acceleration into velocity and position
+        // Function to integrate sensor acceleration into velocity and position
+        function integrateSensorData() {
+            if (!currentSensorData || !currentSensorData.accel) return;
+
+            // Stop all integration if capture is complete - freeze the visualization
+            if (captureComplete) {
+                batVelocity.set(0, 0, 0); // Stop all motion
+                return;
+            }
+
+            // Only integrate when the device reports movement (movingFlag === 1)
+            // and we're within the capture window
+            if (currentSensorData.movingFlag !== 1 || !captureActive) {
+                // Stop all motion when capture is not active
+                if (!captureActive) {
+                    batVelocity.set(0, 0, 0);
+                }
+                return;
+            }
+
+            // Integrate acceleration to get velocity (dt ~ 0.04s at ~25Hz)
+            const dt = 0.04; // Approximate time step
+            let accelInBat = new THREE.Vector3(
+                currentSensorData.accel.x,
+                currentSensorData.accel.y,
+                currentSensorData.accel.z
+            );
+
+            // Apply coordinate system transformation
+            accelInBat = currentCoordinateSystem.transform(accelInBat);
+
+            // Remove gravity effect based on coordinate system
+            if (useNEDCoordinates) {
+                // In NED: Down is positive Z, so gravity acts in +Z direction
+                // We subtract gravity to compensate
+                accelInBat.z -= 9.81; // Compensate for gravity in NED frame
+            } else {
+                // In XYZ: Up is positive Y, so gravity acts in -Y direction
+                accelInBat.z += 9.81; // Compensate for gravity in XYZ frame
+            }
+            
+            // Integrate: v = v + a*dt
+            batVelocity.addScaledVector(accelInBat, dt);
+            
+            // Integrate: p = p + v*dt
+            batPosition.addScaledVector(batVelocity, dt);
+            
+            // Add damping to velocity (friction effect)
+            batVelocity.multiplyScalar(0.95);
+            
+            // Calculate distance from origin
+            const distanceFromOrigin = batPosition.length();
+            
+            // Track maximum distance during this swing
+            if (distanceFromOrigin > maxTrajectoryDistance) {
+                maxTrajectoryDistance = distanceFromOrigin;
+            }
+            
+            // Dynamically scale trajectory to keep it within view bounds
+            // If the trajectory extends beyond MAX_VISIBLE_DISTANCE, scale everything down
+            if (maxTrajectoryDistance > MAX_VISIBLE_DISTANCE) {
+                trajectoryScale = MAX_VISIBLE_DISTANCE / maxTrajectoryDistance;
+                
+                // Apply scaling to current position
+                batPosition.multiplyScalar(trajectoryScale);
+                batVelocity.multiplyScalar(trajectoryScale);
+                
+                // Rescale all existing trajectory points
+                if (trajectoryPoints.length > 0) {
+                    trajectoryPoints.forEach(point => {
+                        point.multiplyScalar(trajectoryScale);
+                    });
+                }
+            }
+        }
+
+        // Update trajectory line with current bat position (only during 2-second capture window)
+        function updateTrajectory() {
+            if (!currentSensorData || !currentSensorData.accel) return;
+
+            // Check if we should be capturing
+            const now = Date.now();
+            
+            // Start capture when movingFlag becomes 1 (device reports movement start)
+            // AND we're ready for a new capture (not already in a capture cycle)
+            // AND we're not in reset cooldown period
+            const currentTime = Date.now();
+            const notInCooldown = !resetCooldownEndTime || currentTime >= resetCooldownEndTime;
+            if (currentSensorData.movingFlag === 1 && !captureActive && readyForNewCapture && notInCooldown) {
+                captureActive = true;
+                readyForNewCapture = false; // Prevent re-triggering until reset
+                captureStartTime = currentTime;
+                captureEndTime = currentTime + totalCaptureWindow; // Total capture window (2 seconds)
+                
+                // Set analysis window within the capture window
+                analysisStartTime = captureStartTime + runupDelay; // Skip initial run-up
+                analysisEndTime = analysisStartTime + captureDuration; // Analysis window duration
+                
+                trajectoryPoints = []; // Clear previous trajectory
+                batPosition.set(0, 0, 0); // Reset position for new capture
+                batVelocity.set(0, 0, 0); // Reset velocity for new capture
+                swingStartPosition.copy(batPosition); // Record start position
+                swingStartVelocity.copy(batVelocity); // Record start velocity
+                maxTrajectoryDistance = 0; // Reset max distance tracking for new swing
+                trajectoryScale = 1.0; // Reset scale factor for new swing
+                swingDirections = []; // Clear direction averaging data
+                swingVelocities = []; // Clear velocity averaging data
+                captureComplete = false; // Mark capture as active (not complete)
+                console.log(`Capture started - Run-up: ${runupDelay}ms, Analysis: ${captureDuration}ms`);
+                status.textContent = `Status: Starting capture (run-up ${runupDelay}ms, analysis ${captureDuration}ms)...`;
+            }
+            
+            // Check if capture window has ended
+            if (captureActive && now >= captureEndTime) {
+                captureActive = false;
+                captureComplete = true; // Mark capture as complete - freeze visualization
+                swingEndPosition.copy(batPosition); // Record final position
+                swingEndVelocity.copy(batVelocity); // Record final velocity
+                
+                // Perform swing analysis using averaged data
+                analyzeSwing();
+                
+                console.log('Capture ended - trajectory complete');
+                status.textContent = `Status: Capture complete`;
+                
+                return; // Stop processing trajectory
+            }
+            
+            // Only process trajectory during capture window
+            if (!captureActive) {
+                return;
+            }
+            
+            // Update end position continuously during capture
+            swingEndPosition.copy(batPosition);
+
+            // Add current position to trajectory (directly use integrated position)
+            trajectoryPoints.push(batPosition.clone());
+
+            // Collect direction and velocity data with selective timing
+            // Only collect data during the analysis window (after run-up delay)
+            const isInAnalysisWindow = captureActive && now >= analysisStartTime && now <= analysisEndTime;
+            
+            if (isInAnalysisWindow && batVelocity.length() > 0.5) { // Focus on meaningful movement
+                const currentDirection = getDirection36(batVelocity).degrees;
+                const currentSpeed = batVelocity.length();
+                
+                // Calculate acceleration magnitude for impact detection
+                const accelMagnitude = currentSensorData.accel ? Math.sqrt(
+                    currentSensorData.accel.x ** 2 + 
+                    currentSensorData.accel.y ** 2 + 
+                    currentSensorData.accel.z ** 2
+                ) : 0;
+                
+                // Weight by both speed AND acceleration magnitude - peak impact has both
+                const speedWeight = currentSpeed;
+                const accelWeight = Math.max(0, accelMagnitude - 9.81); // Remove gravity baseline
+                const combinedWeight = speedWeight + (accelWeight * 2); // Emphasize acceleration spikes
+                
+                swingDirections.push({ direction: currentDirection, weight: combinedWeight });
+                swingVelocities.push({ speed: currentSpeed, weight: combinedWeight });
+                
+                // Limit arrays to prevent memory issues
+                if (swingDirections.length > 50) {
+                    swingDirections.shift();
+                    swingVelocities.shift();
+                }
+            }
+
+            // Limit the number of points to avoid performance issues
+            if (trajectoryPoints.length > maxTrajectoryPoints) {
+                trajectoryPoints.shift(); // Remove oldest point
+            }
+
+            // Update the line geometry
+            if (trajectoryPoints.length > 1) {
+                const positions = new Float32Array(trajectoryPoints.length * 3);
+                for (let i = 0; i < trajectoryPoints.length; i++) {
+                    positions[i * 3] = trajectoryPoints[i].x;
+                    positions[i * 3 + 1] = trajectoryPoints[i].y;
+                    positions[i * 3 + 2] = trajectoryPoints[i].z;
+                }
+
+                if (!trajectoryLine) {
+                    // Create trajectory line if it doesn't exist
+                    trajectoryMaterial = new THREE.LineBasicMaterial({ 
+                        color: 0x00ff00, 
+                        linewidth: 2,
+                        transparent: true,
+                        opacity: 0.7
+                    });
+                    const geometry = new THREE.BufferGeometry();
+                    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+                    trajectoryLine = new THREE.Line(geometry, trajectoryMaterial);
+                    scene.add(trajectoryLine);
+                } else {
+                    // Update existing trajectory line
+                    trajectoryLine.geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+                    trajectoryLine.geometry.attributes.position.needsUpdate = true;
+                }
+            }
+            
+            // Show capture progress with phase information
+            if (captureActive) {
+                const elapsed = now - captureStartTime;
+                const totalRemaining = Math.max(0, (totalCaptureWindow - elapsed) / 1000).toFixed(1);
+                
+                if (now < analysisStartTime) {
+                    const runupRemaining = Math.max(0, (analysisStartTime - now) / 1000).toFixed(1);
+                    status.textContent = `Status: Run-up phase (${runupRemaining}s to analysis)...`;
+                } else if (now <= analysisEndTime) {
+                    const analysisRemaining = Math.max(0, (analysisEndTime - now) / 1000).toFixed(1);
+                    status.textContent = `Status: Analyzing swing (${analysisRemaining}s)...`;
+                } else {
+                    status.textContent = `Status: Post-analysis (${totalRemaining}s remaining)...`;
+                }
+            }
+        }
+
+        // Data parsing function - extracts sensor data from BLE packet
+        function parseSensorData(dataView) {
+            // Packet structure analysis:
+            // The dataView passed here starts AFTER the BLE header (4 bytes: 55,0,6,15)
+            // But the actual data has ANOTHER embedded header (4 bytes: 65,0,6,21 = 0x41,0x00,0x06,0x15)
+            // So we need to skip 4 more bytes to get to the actual IMUSegResultToBeSent
+            // 
+            // Structure:
+            // Bytes 0-3: Embedded header [0x41, 0x00, 0x06, 0x15]
+            // Bytes 4-15: p[3] - displacement (12 bytes)
+            // Bytes 16-27: v[3] - velocity (12 bytes)
+            // Bytes 28-39: ypr[3] - yaw/pitch/roll in degrees (12 bytes)
+            // Byte 40: moving flag
+            // Bytes 41-56: q[4] - quaternion (16 bytes)
+            // Bytes 57-68: accel[3] - accelerometer (12 bytes)
+            // Bytes 69-80: gyro[3] - gyroscope (12 bytes)
+            // Bytes 81-82: timestamp (2 bytes)
+
+            const parsedData = {
+                yaw: 0,
+                pitch: 0,
+                roll: 0,
+                movingFlag: 0,
+                quaternion: new THREE.Quaternion(0, 0, 0, 1),
+                accel: new THREE.Vector3(0, 0, 0),
+                gyro: new THREE.Vector3(0, 0, 0),
+                displacement: new THREE.Vector3(0, 0, 0),
+                velocity: new THREE.Vector3(0, 0, 0)
+            };
+
+            try {
+                // Skip the embedded header (4 bytes) and start reading from byte 4
+                const offset = 4;
+
+                // Extract displacement (position) at bytes 4-15 (offset 4-15)
+                parsedData.displacement.x = dataView.getFloat32(offset + 0, true);
+                parsedData.displacement.y = dataView.getFloat32(offset + 4, true);
+                parsedData.displacement.z = dataView.getFloat32(offset + 8, true);
+
+                // Extract velocity at bytes 16-27 (offset 12-23)
+                parsedData.velocity.x = dataView.getFloat32(offset + 12, true);
+                parsedData.velocity.y = dataView.getFloat32(offset + 16, true);
+                parsedData.velocity.z = dataView.getFloat32(offset + 20, true);
+
+                // Extract YPR angles (in degrees) at bytes 28-39 (offset 24-35)
+                parsedData.yaw = dataView.getFloat32(offset + 24, true);
+                parsedData.pitch = dataView.getFloat32(offset + 28, true);
+                parsedData.roll = dataView.getFloat32(offset + 32, true);
+
+                // Extract moving flag at byte 40 (offset 36)
+                parsedData.movingFlag = dataView.getUint8(offset + 36);
+
+                // Extract quaternion at bytes 41-56 (offset 37-52)
+                // Firmware stores as: result.q[0], q[1], q[2], q[3] (w, x, y, z)
+                const q0 = dataView.getFloat32(offset + 37, true); // q[0] = w
+                const q1 = dataView.getFloat32(offset + 41, true); // q[1] = x
+                const q2 = dataView.getFloat32(offset + 45, true); // q[2] = y
+                const q3 = dataView.getFloat32(offset + 49, true); // q[3] = z
+                // Three.js Quaternion constructor expects (x, y, z, w)
+                parsedData.quaternion.set(q1, q2, q3, q0);
+
+                // Extract raw accelerometer data at bytes 57-68 (offset 53-64)
+                parsedData.accel.x = dataView.getFloat32(offset + 53, true);
+                parsedData.accel.y = dataView.getFloat32(offset + 57, true);
+                parsedData.accel.z = dataView.getFloat32(offset + 61, true);
+
+                // Extract raw gyroscope data at bytes 69-80 (offset 65-76)
+                parsedData.gyro.x = dataView.getFloat32(offset + 65, true);
+                parsedData.gyro.y = dataView.getFloat32(offset + 69, true);
+                parsedData.gyro.z = dataView.getFloat32(offset + 73, true);
+
+                console.log(`Displacement: [${parsedData.displacement.x.toFixed(4)}, ${parsedData.displacement.y.toFixed(4)}, ${parsedData.displacement.z.toFixed(4)}]`);
+                console.log(`YPR: [${parsedData.yaw.toFixed(2)}°, ${parsedData.pitch.toFixed(2)}°, ${parsedData.roll.toFixed(2)}°]`);
+                console.log(`Quaternion (XYZW): [${parsedData.quaternion.x.toFixed(4)}, ${parsedData.quaternion.y.toFixed(4)}, ${parsedData.quaternion.z.toFixed(4)}, ${parsedData.quaternion.w.toFixed(4)}]`);
+                console.log(`Moving: ${parsedData.movingFlag}, Accel: [${parsedData.accel.x.toFixed(2)}, ${parsedData.accel.y.toFixed(2)}, ${parsedData.accel.z.toFixed(2)}]`);
+
+                // Validate quaternion
+                const qMagnitude = Math.sqrt(q0*q0 + q1*q1 + q2*q2 + q3*q3);
+                if (qMagnitude < 0.5) {
+                    console.warn('Invalid quaternion magnitude:', qMagnitude);
+                    return null;
+                }
+
+                return parsedData;
+
+            } catch (error) {
+                console.error('Error parsing sensor data:', error);
+                return null;
+            }
+        }
+
+        // BLE Connection function - based on original index.html
+        async function connect() {
+            try {
+                status.textContent = 'Status: Scanning for FAN devices...';
+
+                // Request device with acceptAllDevices to show picker
+                device = await navigator.bluetooth.requestDevice({
+                    acceptAllDevices: true,
+                    optionalServices: [...PRIMARY_SERVICE_UUIDS, ...FALLBACK_SERVICE_UUIDS]
+                });
+
+                // Check if selected device has FAN in name
+                if (device.name && device.name.toUpperCase().includes('FAN')) {
+                    console.log(`Selected FAN device: ${device.name}`);
+                } else {
+                    console.log(`Selected device: ${device.name || 'Unnamed device'}`);
+                }
+
+                status.textContent = `Status: Connecting to ${device.name || 'device'}...`;
+
+                // Connect to GATT server
+                const server = await device.gatt.connect();
+                console.log('GATT connection successful');
+
+                status.textContent = 'Status: Connected, discovering services...';
+
+                // Try to find a suitable service and characteristic
+                let service = null;
+                let foundCharacteristic = null;
+
+                try {
+                    service = await server.getPrimaryService(HEART_RATE_SERVICE_UUID);
+                    foundCharacteristic = await service.getCharacteristic(HEART_RATE_MEASUREMENT_UUID);
+                    console.log('Heart Rate Service connected');
+                } catch (error) {
+                    try {
+                        service = await server.getPrimaryService(AUTO_IO_SERVICE_UUID);
+                        foundCharacteristic = await service.getCharacteristic(AUTO_IO_CHARACTERISTIC_UUID);
+                        console.log('Auto IO Service connected');
+                    } catch (autoIoError) {
+                        // Try fallback services
+                        for (const fallbackUuid of FALLBACK_SERVICE_UUIDS) {
+                            try {
+                                service = await server.getPrimaryService(fallbackUuid);
+                                // Get first available characteristic that supports notifications
+                                const characteristics = await service.getCharacteristics();
+                                for (const char of characteristics) {
+                                    if (char.properties.notify || char.properties.indicate) {
+                                        foundCharacteristic = char;
+                                        console.log(`Fallback service ${fallbackUuid} connected`);
+                                        break;
+                                    }
+                                }
+                                if (foundCharacteristic) break;
+                            } catch (fallbackError) {
+                                continue;
+                            }
+                        }
+                        if (!foundCharacteristic) {
+                            throw new Error('Could not find any suitable service with notification-capable characteristics');
+                        }
+                    }
+                }
+
+                if (!service || !foundCharacteristic) {
+                    throw new Error('No suitable service or characteristic found');
+                }
+
+                characteristic = foundCharacteristic;
+
+                // Enable notifications (check both notify and indicate properties)
+                if (characteristic.properties.indicate) {
+                    await characteristic.startNotifications();
+                    console.log('Indications enabled');
+                } else if (characteristic.properties.notify) {
+                    await characteristic.startNotifications();
+                    console.log('Notifications enabled');
+                } else {
+                    throw new Error('Characteristic does not support notifications or indications');
+                }
+
+                status.textContent = 'Status: Connected, starting data stream...';
+
+                // Send trigger command to start IMU data stream
+                if (characteristic.properties.write || characteristic.properties.writeWithoutResponse) {
+                    try {
+                        const triggerCommand = new Uint8Array([0x03, 0x00, 0x06, 0x15, 0xE5]);
+                        await characteristic.writeValue(triggerCommand);
+                        console.log('Trigger command sent successfully');
+                    } catch (error) {
+                        console.log(`Failed to send trigger command: ${error.message}`);
+                    }
+                }
+
+                // Listen for IMU data
+                characteristic.addEventListener('characteristicvaluechanged', handleIMUData);
+
+                // Listen for disconnection
+                device.addEventListener('gattserverdisconnected', handleDisconnection);
+
+                status.textContent = `Status: Connected to ${device.name || 'device'} - Receiving IMU data...`;
+                connectBtn.textContent = 'Disconnect';
+
+            } catch (error) {
+                console.error('Connection failed:', error);
+                status.textContent = 'Status: Connection failed - ' + error.message;
+
+                if (error.message.includes('User cancelled') || error.message.includes('cancelled')) {
+                    status.textContent = 'Status: Connection cancelled by user';
+                } else if (error.message.includes('Bluetooth adapter not available') || error.message.includes('Bluetooth')) {
+                    status.textContent = 'Status: Bluetooth not available - please enable Bluetooth';
+                } else if (error.message.includes('No suitable service') || error.message.includes('does not support')) {
+                    status.textContent = 'Status: Device found but does not have expected services/characteristics';
+                } else if (error.message.includes('notifications')) {
+                    status.textContent = 'Status: Characteristic does not support notifications';
+                }
+            }
+        }
+
+        function disconnect() {
+            if (device && device.gatt.connected) {
+                device.gatt.disconnect();
+                console.log('Device disconnected');
+            }
+            status.textContent = 'Status: Disconnected';
+            connectBtn.textContent = 'Connect to FAN Device';
+            connectBtn.onclick = connect;
+        }
+
+        function handleDisconnection(event) {
+            console.log('Device disconnected unexpectedly');
+            status.textContent = 'Status: Device disconnected - Click to reconnect';
+            connectBtn.textContent = 'Reconnect to FAN Device';
+            connectBtn.onclick = connect;
+        }
+
+        function handleIMUData(event) {
+            const value = event.target.value;
+            const data = new Uint8Array(value.buffer);
+
+            console.log(`Raw packet length: ${data.length}, Header: [${data[0].toString(16)}, ${data[1].toString(16)}, ${data[2].toString(16)}, ${data[3].toString(16)}]`);
+
+            try {
+                // Accept packet formats: 86+ bytes with valid header
+                // Current device format: 0x37 0x00 0x06 0x0F (55, 0, 6, 15) - 90 byte packets
+                // Alternative formats: 0x41 0x00 0x06 0x15 (65, 0, 6, 21)
+                const isValidHeader = data.length >= 86 && data[1] === 0x00 && data[2] === 0x06;
+                
+                if (isValidHeader) {
+                    console.log('✓ Valid packet header found, packet length:', data.length, 'Header:', [data[0], data[1], data[2], data[3]]);
+
+                    // Create DataView starting after header (byte 4)
+                    const dataView = new DataView(data.buffer, data.byteOffset + 4);
+                    
+                    // Log the first few bytes to verify data
+                    const bytesToLog = Math.min(80, data.length - 4);
+                    console.log(`First ${bytesToLog} bytes (after header):`, new Uint8Array(data.buffer, data.byteOffset + 4, bytesToLog));
+
+                    // Parse sensor data using our parsing function
+                    const sensorData = parseSensorData(dataView);
+
+                    if (sensorData) {
+                        // Update current sensor data for Three.js animation
+                        currentSensorData = sensorData;
+
+                        // Update acceleration display (showing raw sensor data)
+                        accelDisplay.textContent = `YPR: ${sensorData.yaw.toFixed(1)}° ${sensorData.pitch.toFixed(1)}° ${sensorData.roll.toFixed(1)}° | Accel: ${sensorData.accel.x.toFixed(2)}/${sensorData.accel.y.toFixed(2)}/${sensorData.accel.z.toFixed(2)} m/s² | Moving: ${sensorData.movingFlag}`;
+                    } else {
+                        console.log('Parsing returned null - data structure mismatch');
+                    }
+
+                } else {
+                    console.log('✗ Packet rejected - length:', data.length, 'or header mismatch');
+                    // Handle START/STOP packets or invalid data
+                    const dataStr = new TextDecoder().decode(data);
+                    if (dataStr.includes('START')) {
+                        console.log('📡 Data stream started');
+                        status.textContent = 'Status: Data stream started';
+                        clearTrajectory(); // Clear trajectory when starting new data stream
+                    } else if (dataStr.includes('STOP')) {
+                        console.log('⏹️ Data stream stopped');
+                        status.textContent = 'Status: Data stream stopped';
+                        // Stop capturing when STOP command is received
+                        captureActive = false;
+                        readyForNewCapture = true; // Allow new capture after STOP
+                        // Freeze the trajectory visualization
+                        console.log('Capture frozen - stop command received');
+                    }
+                }
+
+            } catch (error) {
+                console.error('Error parsing IMU data:', error);
+            }
+        }
+
+        // Event listeners
+        connectBtn.addEventListener('click', connect);
+        
+        resetBtn.addEventListener('click', () => {
+            console.log('Performing full reset - clearing all data and centering display');
+            
+            // Stop any ongoing capture
+            captureActive = false;
+            captureComplete = false; // Reset capture complete flag
+            readyForNewCapture = false; // Temporarily disable new captures
+            
+            // Reset sensor data moving flag to prevent unwanted captures
+            if (currentSensorData) {
+                currentSensorData.movingFlag = 0;
+            }
+            
+            // Set cooldown period to prevent immediate recapture (500ms)
+            resetCooldownEndTime = Date.now() + 500;
+            
+            // Reset trajectory scaling
+            maxTrajectoryDistance = 0;
+            trajectoryScale = 1.0;
+            
+            // Clear trajectory points
+            trajectoryPoints = [];
+            
+            // Clear swing analysis data
+            swingDirections = [];
+            swingVelocities = [];
+            
+            // Reset swing tracking variables
+            
+            // Reset swing tracking variables
+            swingStartPosition.set(0, 0, 0);
+            swingEndPosition.set(0, 0, 0);
+            swingStartVelocity.set(0, 0, 0);
+            swingEndVelocity.set(0, 0, 0);
+            
+            // Remove trajectory line from scene
+            if (trajectoryLine && scene) {
+                if (scene.getObjectById(trajectoryLine.id)) {
+                    scene.remove(trajectoryLine);
+                }
+                trajectoryLine = null;
+            }
+            
+            // Clear direction line if it exists - make sure to remove all instances
+            if (directionLine) {
+                if (scene && scene.getObjectById(directionLine.id)) {
+                    scene.remove(directionLine);
+                }
+                directionLine = null;
+            }
+            
+            // Reset all position and velocity vectors to origin
+            batPosition.set(0, 0, 0);
+            batVelocity.set(0, 0, 0);
+            
+            // Update sensor dot position
+            if (sensorDot) {
+                sensorDot.position.set(0, 0, 0);
+            }
+            
+            // Reset camera view and controls
+            if (camera && controls) {
+                // Reset camera position
+                camera.position.set(12, 12, 12);
+                camera.lookAt(0, 0, 0);
+                
+                // Reset orbit controls to initial state
+                controls.target.set(0, 0, 0);
+                controls.reset();
+            }
+            
+            // Reset compass and swing info
+            updateCompassDisplay(0);
+            updateSwingInfoDisplay(0, 0, '--');
+            
+            // DO NOT reset calibration - keep the reference angle
+            // compassOffset and isCalibrated should persist across resets
+            
+            // Update status message - mention calibration is retained
+            if (isCalibrated) {
+                const referenceAngle = (-compassOffset).toFixed(1);
+                status.textContent = `Status: Reset complete - calibration retained (ref: ${referenceAngle}°)`;
+                calibrateBtn.textContent = `🧭 North Set (${referenceAngle}°)`;
+            } else {
+                status.textContent = 'Status: Reset complete - ready for new capture';
+                calibrateBtn.textContent = '🧭 Calibrate North';
+            }
+            
+            // Update status message
+            status.textContent = 'Status: Reset complete - ready for new capture';
+            console.log('Reset complete - all data cleared, dot centered at origin, camera reset');
+            
+            // Re-enable captures after cooldown
+            setTimeout(() => {
+                readyForNewCapture = true;
+                console.log('Reset cooldown ended - ready for new captures');
+            }, 500);
+        });
+        
+        
+
+        // NED toggle button event listener
+        nedToggleBtn.addEventListener('click', () => {
+            useNEDCoordinates = !useNEDCoordinates;
+            nedToggleBtn.textContent = useNEDCoordinates ? '📍 NED Mode: ON' : '📍 NED Mode: OFF';
+            nedToggleBtn.style.backgroundColor = useNEDCoordinates ? '#4CAF50' : '#1976D2';
+            console.log('NED mode toggled:', useNEDCoordinates);
+            status.textContent = `Status: NED mode ${useNEDCoordinates ? 'enabled' : 'disabled'}`;
+        });
+        
+        // Compass calibration button event listener
+        calibrateBtn.addEventListener('click', () => {
+            if (!currentSensorData || currentSensorData.yaw === undefined) {
+                status.textContent = 'Status: No sensor data available for calibration';
+                return;
+            }
+            
+            // Use current yaw as the North reference (compass offset)
+            // In NED mode, we want the current device direction to become "North"
+            const currentYaw = currentSensorData.yaw;
+            compassOffset = -currentYaw; // Negative because we want to rotate the compass to align with device
+            isCalibrated = true;
+            
+            console.log(`Compass calibrated: Current yaw=${currentYaw.toFixed(1)}°, offset=${compassOffset.toFixed(1)}°`);
+            status.textContent = `Status: North calibrated! Reference angle: ${currentYaw.toFixed(1)}° (Device facing bowler)`;
+            
+            // Update compass display to show calibration - compass should point to North (0°) after calibration
+            updateCompassDisplay(0); // Show North after calibration
+            
+            // Visual feedback - button changes color briefly
+            calibrateBtn.style.backgroundColor = '#4CAF50';
+            calibrateBtn.textContent = `✅ North Set (${currentYaw.toFixed(1)}°)`;
+            setTimeout(() => {
+                calibrateBtn.style.backgroundColor = '#FF9800';
+                calibrateBtn.textContent = `🧭 North Set (${currentYaw.toFixed(1)}°)`;
+            }, 3000);
+        });
+        
+        // Update timing controls event listener
+        updateTimingBtn.addEventListener('click', () => {
+            const newRunupDelay = parseInt(runupDelayInput.value);
+            const newCaptureWindow = parseInt(captureWindowInput.value);
+            
+            // Validate inputs
+            if (newRunupDelay >= 0 && newRunupDelay <= 2000 && 
+                newCaptureWindow >= 250 && newCaptureWindow <= 2000) {
+                
+                runupDelay = newRunupDelay;
+                captureDuration = newCaptureWindow;
+                
+                console.log(`Timing updated: Run-up=${runupDelay}ms, Capture=${captureDuration}ms`);
+                status.textContent = `Status: Timing updated - Run-up: ${runupDelay}ms, Analysis: ${captureDuration}ms`;
+                
+                // Visual feedback
+                updateTimingBtn.style.backgroundColor = '#4CAF50';
+                updateTimingBtn.textContent = '✅ Updated';
+                setTimeout(() => {
+                    updateTimingBtn.style.backgroundColor = '#2196F3';
+                    updateTimingBtn.textContent = '⚙️ Update Timing';
+                }, 1500);
+            } else {
+                status.textContent = 'Status: Invalid timing values - Run-up: 0-2000ms, Capture: 250-2000ms';
+            }
+        });
+        
+        // Initialize Three.js when page loads
+        window.addEventListener('load', initThreeJS);        // Handle Bluetooth availability changes
+        if (navigator.bluetooth) {
+            navigator.bluetooth.addEventListener('availabilitychanged', event => {
+                if (!event.value) disconnect();
+            });
+        }
+    </script>
+</body>
+</html>
